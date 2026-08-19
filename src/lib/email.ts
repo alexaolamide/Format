@@ -1,19 +1,31 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = 'Doerforge by Alex Studio <onboarding@resend.dev>';
 
-const FROM_EMAIL = 'ResumeAI <onboarding@resend.dev>';
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+
+  return new Resend(apiKey);
+}
+
+function getAppUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+}
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://resume-builder-yj54.onrender.com'}/verify-email?token=${token}`;
+  const resend = getResendClient();
+  const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
 
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: 'Verify your ResumeAI account',
+    subject: 'Verify your Doerforge account',
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-        <h1 style="font-size: 24px; color: #111827;">Welcome to ResumeAI!</h1>
+        <h1 style="font-size: 24px; color: #111827;">Welcome to Doerforge!</h1>
         <p style="color: #4b5563; margin-top: 16px;">Click the button below to verify your email address and start building your ATS-optimized resume.</p>
         <a href="${verifyUrl}" style="display: inline-block; margin-top: 24px; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
           Verify Email
@@ -25,12 +37,13 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://resume-builder-yj54.onrender.com'}/reset-password?token=${token}`;
+  const resend = getResendClient();
+  const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
 
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: 'Reset your ResumeAI password',
+    subject: 'Reset your Doerforge password',
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <h1 style="font-size: 24px; color: #111827;">Reset Your Password</h1>

@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         $set: {
           jobDescription,
           aiOptimized: true,
+          optimizedContent,
           updatedAt: new Date(),
         },
       }

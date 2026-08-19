@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import ResumeBuilder from '@/components/ResumeBuilder';
 import ATSScore from '@/components/ATSScore';
+import ResumePreview from '@/components/ResumePreview';
 import toast from 'react-hot-toast';
 
 export default function EditResumePage() {
@@ -20,6 +21,7 @@ export default function EditResumePage() {
   const [loading, setLoading] = useState(true);
   const [jobDescription, setJobDescription] = useState('');
   const [optimizing, setOptimizing] = useState(false);
+  const [optimizedContent, setOptimizedContent] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -40,6 +42,7 @@ export default function EditResumePage() {
 
       if (data.success) {
         setResume(data.resume);
+        setOptimizedContent(data.resume.optimizedContent || '');
       } else {
         toast.error('Resume not found');
         router.push('/dashboard');
@@ -93,6 +96,7 @@ export default function EditResumePage() {
       const data = await response.json();
 
       if (data.success) {
+        setOptimizedContent(data.optimizedContent || '');
         toast.success('Resume optimized!');
       } else {
         toast.error(data.error || 'Failed to optimize resume');
@@ -118,7 +122,7 @@ export default function EditResumePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <a href="/dashboard" className="text-2xl font-bold text-primary-600">
-              ResumeAI
+              Doerforge
             </a>
             <a href="/dashboard" className="text-gray-600 hover:text-gray-900">
               Back to Dashboard
@@ -141,6 +145,8 @@ export default function EditResumePage() {
               <ATSScore resumeId={resume._id} initialScore={resume.atsScore} />
             )}
 
+            {resume?._id && <ResumePreview resume={resume} />}
+
             {/* AI Optimization */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold mb-4">AI Optimization</h3>
@@ -161,6 +167,12 @@ export default function EditResumePage() {
               >
                 {optimizing ? 'Optimizing...' : 'Optimize for Job'}
               </button>
+              {optimizedContent && (
+                <div className="mt-4 rounded-lg bg-gray-50 p-4">
+                  <h4 className="font-semibold text-gray-900">Optimized resume content</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700">{optimizedContent}</p>
+                </div>
+              )}
             </div>
 
             {/* Delete Button */}

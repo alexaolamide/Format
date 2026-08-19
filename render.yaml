@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: resume-builder
+    name: doerforge
     env: node
     region: oregon
     plan: free
@@ -14,8 +14,11 @@ services:
         value: 20.18.0
       - key: PORT
         value: 10000
+      # Set this to the URL Render assigns to the new service.
       - key: NEXTAUTH_URL
-        value: https://resume-builder.onrender.com
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
       # --- Required secrets — fill these in the Render dashboard ---
       - key: MONGODB_URI
         sync: false
@@ -29,5 +32,9 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
         sync: false

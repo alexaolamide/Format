@@ -1,10 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Verifying your email...</div>}>
+      <VerifyEmailStatus />
+    </Suspense>
+  );
+}
+
+function VerifyEmailStatus() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');

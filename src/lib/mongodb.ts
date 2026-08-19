@@ -15,7 +15,7 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
   }
 
   const client = await MongoClient.connect(MONGODB_URI);
-  const db = client.db('resume-builder');
+  const db = client.db('doerforge');
 
   cachedClient = client;
   cachedDb = db;

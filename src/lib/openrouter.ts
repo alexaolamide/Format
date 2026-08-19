@@ -24,7 +24,7 @@ export async function chatCompletion(
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      'X-Title': 'Resume Builder',
+      'X-Title': 'Doerforge by Alex Studio',
     },
     body: JSON.stringify({
       model,

@@ -71,7 +71,7 @@ export default function ResumeListPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="text-2xl font-bold text-primary-600">
-              ResumeAI
+              Doerforge
             </Link>
             <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
               Back to Dashboard

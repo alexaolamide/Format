@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Manrope } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import Providers from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
+const manrope = Manrope({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AI Resume Builder - Create ATS-Optimized Resumes',
-  description: 'Build ATS-optimized resumes with AI. Tailor your resume to job descriptions and land more interviews.',
-  keywords: 'resume builder, ATS resume, AI resume, job application, cover letter',
+  title: 'Doerforge by Alex Studio | Practical AI Tools',
+  description: 'Doerforge by Alex Studio brings practical AI tools for careers, business, creators, productivity, and learning.',
+  keywords: 'Doerforge, Alex Studio, AI tools, career tools, productivity tools, business tools',
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={manrope.className}>
         <Providers>
           <Toaster position="top-right" />
           {children}

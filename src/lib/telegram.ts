@@ -23,7 +23,7 @@ export async function sendInvoice(params: InvoiceParams): Promise<any> {
       title: params.title,
       description: params.description,
       payload: params.payload,
-      provider_token: params.provider_token,
+      ...(params.provider_token ? { provider_token: params.provider_token } : {}),
       currency: params.currency,
       prices: params.prices,
     }),

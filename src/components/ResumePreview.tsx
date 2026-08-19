@@ -42,11 +42,15 @@ export default function ResumePreview({ resume }: ResumePreviewProps) {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#147d70]">Live document</p>
+          <h2 className="mt-1 text-lg font-extrabold text-[#17211f]">Resume preview</h2>
+        </div>
         <button
           onClick={handleExportPDF}
           disabled={exporting}
-          className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 disabled:opacity-50 text-sm font-medium"
+          className="flex items-center gap-2 rounded-full bg-[#17211f] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0c514a] disabled:opacity-50"
         >
           {exporting ? (
             <>
@@ -64,12 +68,12 @@ export default function ResumePreview({ resume }: ResumePreviewProps) {
         </button>
       </div>
 
-      <div ref={previewRef} className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
-        <div className="text-center border-b border-gray-200 pb-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">
+      <div ref={previewRef} className="mx-auto max-w-2xl rounded-2xl border border-[#d8e1db] bg-white p-8 shadow-lift sm:p-10">
+        <div className="mb-7 border-b-2 border-[#17211f] pb-6">
+          <h1 className="text-4xl font-extrabold tracking-tight text-[#17211f]">
             {resume.personalInfo?.fullName || 'Your Name'}
           </h1>
-          <div className="mt-2 text-gray-600 space-y-1">
+          <div className="mt-3 space-y-1 text-sm text-[#697572]">
             {resume.personalInfo?.email && <p>{resume.personalInfo.email}</p>}
             {resume.personalInfo?.phone && <p>{resume.personalInfo.phone}</p>}
             {resume.personalInfo?.location && <p>{resume.personalInfo.location}</p>}
@@ -90,8 +94,8 @@ export default function ResumePreview({ resume }: ResumePreviewProps) {
 
         {resume.personalInfo?.summary && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-3">Professional Summary</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{resume.personalInfo.summary}</p>
+            <h2 className="mb-3 border-b border-[#dfe6e1] pb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-[#147d70]">Professional Summary</h2>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-[#3f4d49]">{resume.personalInfo.summary}</p>
           </div>
         )}
 
