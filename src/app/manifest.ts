@@ -1,0 +1,20 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Doerforge by Alex Studio',
+    short_name: 'Doerforge',
+    description: 'Practical AI tools for careers, business, creators, productivity, and learning.',
+    start_url: '/dashboard',
+    scope: '/',
+    display: 'standalone',
+    background_color: '#f5f7f3',
+    theme_color: '#147d70',
+    lang: 'en',
+    categories: ['productivity', 'business', 'education'],
+    icons: [
+      { src: '/icon', sizes: '32x32', type: 'image/png', purpose: 'any' },
+      { src: '/icon', sizes: '32x32', type: 'image/png', purpose: 'maskable' },
+    ],
+  };
+}
