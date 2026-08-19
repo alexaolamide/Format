@@ -63,6 +63,7 @@ export interface User {
   name: string;
   image?: string;
   plan: 'free' | 'pro' | 'enterprise';
+  role?: 'user' | 'admin';
   creditsRemaining: number;
   telegramId?: number;
   createdAt: Date;

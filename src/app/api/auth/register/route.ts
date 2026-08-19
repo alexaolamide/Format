@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       plan: 'free',
+      role: 'user',
       creditsRemaining: 3,
       emailVerified: null,
       verificationToken,

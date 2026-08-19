@@ -93,9 +93,22 @@ TELEGRAM_WEBHOOK_SECRET=your-webhook-secret
 
 RESEND_API_KEY=re_your-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+ADMIN_EMAILS=admin@example.com
 ```
 
 Never commit `.env.local` or expose server-side secrets in client components.
+
+## Admin Management
+
+Set `ADMIN_EMAILS` to one or more comma-separated account emails in Render:
+
+```env
+ADMIN_EMAILS=owner@example.com,operations@example.com
+```
+
+After an administrator signs in with one of those emails, open `/dashboard/admin`. The protected control room provides platform counts and allows administrators to search users and change roles, plans, and credits. Passwords, reset tokens, and verification tokens are never returned to the admin interface.
+
+Only emails listed in `ADMIN_EMAILS` can bootstrap or retain administrator access. Keep this variable private and remove access by removing an email from the Render environment, then redeploying.
 
 ## Telegram Stars Payments
 

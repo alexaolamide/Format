@@ -86,6 +86,7 @@ export default function DashboardPage() {
             <Link href="/" className="flex items-center gap-3 text-lg font-extrabold tracking-tight"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#147d70] text-sm text-white">D</span>Doerforge</Link>
             <div className="flex items-center gap-4">
               <span className="hidden text-sm font-semibold text-muted sm:inline">{session?.user?.name || session?.user?.email}</span>
+              {(session?.user as any)?.role === 'admin' && <Link href="/dashboard/admin" className="text-sm font-bold text-[#147d70]">Admin</Link>}
               <Link href="/dashboard/settings" className="rounded-full border border-soft px-4 py-2 text-sm font-bold text-ink transition hover:border-[#147d70] hover:text-[#147d70]">Settings</Link>
             </div>
           </div>

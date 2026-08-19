@@ -19,6 +19,8 @@ services:
         sync: false
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
       # --- Required secrets — fill these in the Render dashboard ---
       - key: MONGODB_URI
         sync: false
