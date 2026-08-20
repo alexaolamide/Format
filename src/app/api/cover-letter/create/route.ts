@@ -6,8 +6,11 @@ import { authOptions } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { generateCoverLetter } from '@/lib/openrouter';
 import { ObjectId } from 'mongodb';
+import crypto from 'crypto';
+import { completeReservation, creditLimitMessage, releaseReservation, reserveCredits, type CreditReservation } from '@/lib/credits';
 
 export async function POST(request: NextRequest) {
+  let reservation: CreditReservation | null = null;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -37,12 +40,11 @@ export async function POST(request: NextRequest) {
       _id: new ObjectId((session.user as any).id),
     });
 
-    if (user?.plan === 'free' && user?.creditsRemaining <= 0) {
-      return NextResponse.json(
-        { error: 'Free tier limit reached. Please upgrade to Pro.' },
-        { status: 403 }
-      );
-    }
+    reservation = await reserveCredits(db, (session.user as any).id, 'cover-letter', 4, crypto.randomUUID()).catch((error) => {
+      if (error instanceof Error && error.message === 'CREDIT_LIMIT') return null;
+      throw error;
+    });
+    if (!reservation) return NextResponse.json({ error: creditLimitMessage(), code: 'CREDIT_LIMIT' }, { status: 402 });
 
     const resumeContent = [
       `Name: ${resume.personalInfo.fullName}`,
@@ -87,13 +89,6 @@ export async function POST(request: NextRequest) {
 
     const result = await db.collection('coverletters').insertOne(coverLetter);
 
-    if (user?.plan === 'free') {
-      await db.collection('users').updateOne(
-        { _id: new ObjectId((session.user as any).id) },
-        { $inc: { creditsRemaining: -1 } }
-      );
-    }
-
     await db.collection('usage').insertOne({
       userId: (session.user as any).id,
       type: 'cover_letter',
@@ -101,12 +96,17 @@ export async function POST(request: NextRequest) {
       month: new Date().toISOString().slice(0, 7),
       createdAt: new Date(),
     });
+    await completeReservation(db, reservation);
 
     return NextResponse.json({
       success: true,
       coverLetter: { ...coverLetter, _id: result.insertedId },
     });
   } catch (error) {
+    if (reservation) {
+      const { db } = await connectToDatabase();
+      await releaseReservation(db, reservation);
+    }
     console.error('Generate cover letter error:', error);
     return NextResponse.json(
       { error: 'Failed to generate cover letter' },

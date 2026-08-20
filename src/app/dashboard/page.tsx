@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [coverLetters, setCoverLetters] = useState([]);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState('');
+  const [credits, setCredits] = useState<{ dailyCreditsRemaining: number; purchasedCredits: number } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -30,6 +31,9 @@ export default function DashboardPage() {
       fetchCoverLetters();
       fetch('/api/telegram/verify').then((response) => response.json()).then((data) => {
         if (data.success) setTelegramId(data.telegramId);
+      });
+      fetch('/api/credits').then((response) => response.json()).then((data) => {
+        if (data.success) setCredits(data);
       });
     }
   }, [session]);
@@ -146,6 +150,11 @@ export default function DashboardPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="rounded-2xl border border-soft bg-[#e7f4ed] p-6 shadow-soft">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#176b5e]">Credits available</h3>
+            <p className="mt-2 text-4xl font-extrabold text-[#147d70]">{(credits?.dailyCreditsRemaining || 0) + (credits?.purchasedCredits || 0)}</p>
+            <p className="mt-1 text-xs text-[#4c776e]">{credits?.dailyCreditsRemaining || 0} daily + {credits?.purchasedCredits || 0} purchased</p>
+          </div>
           <div className="rounded-2xl border border-soft bg-white p-6 shadow-soft">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Total Resumes</h3>
             <p className="mt-2 text-4xl font-extrabold text-[#147d70]">{resumes.length}</p>

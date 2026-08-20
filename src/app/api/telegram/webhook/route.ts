@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { answerCallbackQuery, answerPreCheckoutQuery, sendInvoice, sendTelegramMessage } from '@/lib/telegram';
 import { connectToDatabase } from '@/lib/mongodb';
 import { tools } from '@/lib/tools';
+import { DEFAULT_DAILY_CREDITS } from '@/lib/credits';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -41,7 +42,10 @@ export async function POST(request: NextRequest) {
           inline_keyboard: paidTools.map((tool) => [{
             text: `${tool.name} · ${tool.priceStars} ⭐`,
             callback_data: `buy_tool:${tool.id}`,
-          }]),
+          }]).concat([
+            [{ text: 'Buy 30 credits · 10 ⭐', callback_data: 'buy_credits:10' }],
+            [{ text: 'Buy 150 credits · 50 ⭐', callback_data: 'buy_credits:50' }],
+          ]),
         },
       );
       return NextResponse.json({ success: true });
@@ -76,6 +80,24 @@ export async function POST(request: NextRequest) {
           ...(process.env.TELEGRAM_STORE_IMAGE_URL ? { photo_url: process.env.TELEGRAM_STORE_IMAGE_URL } : {}),
         });
         await answerCallbackQuery(String(callback.id), result.ok ? 'Invoice sent.' : 'Could not create invoice.');
+      }
+      if (callbackData.startsWith('buy_credits:')) {
+        const stars = Number(callbackData.slice('buy_credits:'.length));
+        const user = callback.from?.id ? await connectToDatabase().then(({ db }) => db.collection('users').findOne({ telegramId: callback.from.id })) : null;
+        if (!user || !callback.from?.id || !Number.isInteger(stars) || stars < 1) {
+          await answerCallbackQuery(String(callback.id), 'Link your account first.');
+          return NextResponse.json({ success: true });
+        }
+        const credits = stars * 3;
+        const result = await sendInvoice({
+          user_id: callback.from.id,
+          title: `${credits} Doerforge credits`,
+          description: `Permanent Doerforge credits. ${stars} Stars gives you ${credits} credits.`,
+          payload: `credits_${stars}_${credits}_${user._id.toString()}`,
+          currency: 'XTR',
+          prices: [{ label: `${credits} credits`, amount: stars }],
+        });
+        await answerCallbackQuery(String(callback.id), result.ok ? 'Credit invoice sent.' : 'Could not create invoice.');
       }
       return NextResponse.json({ success: true });
     }
@@ -140,6 +162,10 @@ export async function POST(request: NextRequest) {
         await answerPreCheckoutQuery(String(id), false, 'This invoice is not valid for this account.');
         return NextResponse.json({ success: false });
       }
+      if (payloadParts[0] === 'credits' && (!Number.isInteger(Number(payloadParts[1])) || !Number.isInteger(Number(payloadParts[2])) || payloadParts[3] !== user._id.toString())) {
+        await answerPreCheckoutQuery(String(id), false, 'This credit invoice is not valid for this account.');
+        return NextResponse.json({ success: false });
+      }
 
       await answerPreCheckoutQuery(String(id), true);
       return NextResponse.json({ success: true });
@@ -156,9 +182,14 @@ export async function POST(request: NextRequest) {
 
       const payloadParts = invoice_payload.split('_');
       const isToolPurchase = payloadParts[0] === 'tool';
+      const isCreditPurchase = payloadParts[0] === 'credits';
       const plan = isToolPurchase ? undefined : (payloadParts[0] || 'pro');
 
       const { db } = await connectToDatabase();
+      const paymentUser = await db.collection('users').findOne({ telegramId });
+      if (!paymentUser || (isToolPurchase && payloadParts[2] !== paymentUser._id.toString()) || (isCreditPurchase && payloadParts[3] !== paymentUser._id.toString())) {
+        return NextResponse.json({ error: 'Payment account mismatch' }, { status: 400 });
+      }
       const existingPayment = await db.collection('telegramPayments').findOne({
         telegramPaymentChargeId: telegram_payment_charge_id,
       });
@@ -168,9 +199,11 @@ export async function POST(request: NextRequest) {
 
       await db.collection('users').updateOne(
         { telegramId },
-        isToolPurchase
-          ? { $addToSet: { purchasedTools: payloadParts[1] }, $set: { updatedAt: new Date() } }
-          : { $set: { plan, creditsRemaining: plan === 'pro' ? 999 : 9999, updatedAt: new Date() } }
+        isCreditPurchase
+          ? { $inc: { purchasedCredits: Number(payloadParts[2]) }, $set: { updatedAt: new Date() } }
+          : isToolPurchase
+            ? { $addToSet: { purchasedTools: payloadParts[1] }, $set: { updatedAt: new Date() } }
+          : { $set: { plan, creditsRemaining: plan === 'pro' ? 999 : 9999, dailyCreditsRemaining: DEFAULT_DAILY_CREDITS[plan as keyof typeof DEFAULT_DAILY_CREDITS] || DEFAULT_DAILY_CREDITS.free, dailyCreditsResetAt: new Date(Date.now() + 24 * 60 * 60 * 1000), updatedAt: new Date() } }
       );
 
       await db.collection('telegramPayments').insertOne({
@@ -183,8 +216,10 @@ export async function POST(request: NextRequest) {
       const purchasedTool = isToolPurchase ? tools.find((tool) => tool.id === payloadParts[1]) : null;
       await sendTelegramMessage(
         telegramId,
-        isToolPurchase
-          ? `<b>Payment successful</b> ✅\n\n<b>Tool:</b> ${purchasedTool?.name || payloadParts[1]}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>\n\nThe tool is now unlocked in your Doerforge account. You can use it from the website or send /store to buy another tool.`
+        isCreditPurchase
+          ? `<b>Credit purchase successful</b> ✅\n\n<b>Credits added:</b> ${Number(payloadParts[2])}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>\n\nYour permanent credits are now available in Doerforge.`
+          : isToolPurchase
+            ? `<b>Payment successful</b> ✅\n\n<b>Tool:</b> ${purchasedTool?.name || payloadParts[1]}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>\n\nThe tool is now unlocked in your Doerforge account. You can use it from the website or send /store to buy another tool.`
           : `<b>Payment successful</b> ✅\n\n<b>Plan:</b> ${plan!.toUpperCase()}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>`,
       );
 

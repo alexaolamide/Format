@@ -12,6 +12,8 @@ function safeUser(user: any) {
     role: user.role || 'user',
     plan: user.plan || 'free',
     creditsRemaining: user.creditsRemaining ?? 0,
+    dailyCreditsRemaining: user.dailyCreditsRemaining ?? 0,
+    purchasedCredits: user.purchasedCredits ?? 0,
     telegramConnected: Boolean(user.telegramId),
     purchasedTools: user.purchasedTools || [],
     createdAt: user.createdAt,
@@ -54,7 +56,7 @@ export async function PATCH(request: NextRequest) {
     const context = await getAdminContext();
     if (!context) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { userId, role, plan, creditsRemaining } = await request.json();
+    const { userId, role, plan, creditsRemaining, dailyCreditsRemaining, purchasedCredits } = await request.json();
     if (!userId || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
     }
@@ -67,11 +69,16 @@ export async function PATCH(request: NextRequest) {
     if (creditsRemaining !== undefined && (!Number.isInteger(creditsRemaining) || creditsRemaining < 0)) {
       return NextResponse.json({ error: 'Credits must be a non-negative integer' }, { status: 400 });
     }
+    if ([dailyCreditsRemaining, purchasedCredits].some((value) => value !== undefined && (!Number.isInteger(value) || value < 0))) {
+      return NextResponse.json({ error: 'Credit balances must be non-negative integers' }, { status: 400 });
+    }
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (role) updates.role = role;
     if (plan) updates.plan = plan;
     if (creditsRemaining !== undefined) updates.creditsRemaining = creditsRemaining;
+    if (dailyCreditsRemaining !== undefined) updates.dailyCreditsRemaining = dailyCreditsRemaining;
+    if (purchasedCredits !== undefined) updates.purchasedCredits = purchasedCredits;
 
     const result = await context.db.collection('users').updateOne(
       { _id: new ObjectId(userId) },

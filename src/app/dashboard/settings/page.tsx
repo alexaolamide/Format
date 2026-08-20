@@ -15,6 +15,9 @@ export default function SettingsPage() {
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [unlinkingTelegram, setUnlinkingTelegram] = useState(false);
   const [telegramProfile, setTelegramProfile] = useState('');
+  const [creditStars, setCreditStars] = useState('10');
+  const [creditMessage, setCreditMessage] = useState('');
+  const [creditBalance, setCreditBalance] = useState({ dailyCreditsRemaining: 0, purchasedCredits: 0 });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -29,6 +32,9 @@ export default function SettingsPage() {
           setTelegramId(data.telegramId);
           setTelegramProfile(data.telegramUsername ? `@${data.telegramUsername}` : (data.telegramName || ''));
         }
+      });
+      fetch('/api/credits').then((response) => response.json()).then((data) => {
+        if (data.success) setCreditBalance(data);
       });
     }
   }, [status]);
@@ -63,6 +69,16 @@ export default function SettingsPage() {
       setTelegramLink('');
     }
     setUnlinkingTelegram(false);
+  };
+
+  const buyCredits = async () => {
+    const response = await fetch('/api/telegram/credits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stars: Number(creditStars) }),
+    });
+    const data = await response.json();
+    setCreditMessage(data.success ? `${data.credits} credits will be added after Telegram confirms payment.` : data.error);
   };
 
   const deleteAccount = async () => {
@@ -103,6 +119,18 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Credits</h2>
+          <p className="text-sm text-gray-600">{creditBalance.dailyCreditsRemaining} daily credits + {creditBalance.purchasedCredits} permanent credits available.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <label className="text-sm font-semibold text-gray-700" htmlFor="credit-stars">Telegram Stars</label>
+            <input id="credit-stars" type="number" min="1" max="10000" value={creditStars} onChange={(event) => setCreditStars(event.target.value)} className="w-28 rounded-lg border border-gray-300 px-3 py-2" />
+            <span className="text-sm text-gray-500">= {Math.max(0, Number(creditStars) * 3 || 0)} credits</span>
+            <button onClick={buyCredits} disabled={!telegramId} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Buy credits</button>
+          </div>
+          {creditMessage && <p className="mt-3 text-sm text-primary-700">{creditMessage}</p>}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription</h2>
           <div className={`p-4 rounded-lg ${isPro ? 'bg-green-50' : 'bg-gray-50'}`}>
             <div className="flex justify-between items-center">
@@ -112,8 +140,8 @@ export default function SettingsPage() {
                 </p>
                 <p className="text-sm text-gray-600">
                   {isPro
-                    ? 'Unlimited resume optimizations and cover letters'
-                    : `${user?.creditsRemaining ?? 0} resume optimizations remaining this month`}
+                    ? 'Your plan includes a larger daily credit allowance'
+                    : `${creditBalance.dailyCreditsRemaining} daily credits remaining`}
                 </p>
               </div>
               {!isPro && (telegramLink ? (

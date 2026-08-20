@@ -7,6 +7,8 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { chatCompletion } from '@/lib/openrouter';
 import { tools, toolInstructions } from '@/lib/tools';
 import { ObjectId } from 'mongodb';
+import crypto from 'crypto';
+import { completeReservation, creditLimitMessage, releaseReservation, reserveCredits } from '@/lib/credits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,23 +37,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Purchase this tool with Telegram Stars before using it.' }, { status: 402 });
     }
 
-    const output = await chatCompletion([
-      {
-        role: 'system',
-        content: `You are Doerforge, an AI productivity tool by Alex Studio. ${toolInstructions[toolId]} Be accurate, practical, and do not invent personal facts. Return only the useful result, with clear headings where helpful.`,
-      },
-      { role: 'user', content: input.trim() },
-    ]);
-
-    await db.collection('toolOutputs').insertOne({
-      userId,
-      toolId,
-      input: input.trim(),
-      output,
-      createdAt: new Date(),
+    const reservation = await reserveCredits(db, userId, toolId, tool.creditCost, crypto.randomUUID()).catch((error) => {
+      if (error instanceof Error && error.message === 'CREDIT_LIMIT') return null;
+      throw error;
     });
+    if (!reservation) return NextResponse.json({ error: creditLimitMessage(), code: 'CREDIT_LIMIT' }, { status: 402 });
 
-    return NextResponse.json({ success: true, output });
+    try {
+      const output = await chatCompletion([
+        {
+          role: 'system',
+          content: `You are Doerforge, an AI productivity tool by Alex Studio. ${toolInstructions[toolId]} Be accurate, practical, and do not invent personal facts. Return only the useful result, with clear headings where helpful.`,
+        },
+        { role: 'user', content: input.trim() },
+      ]);
+
+      await db.collection('toolOutputs').insertOne({ userId, toolId, input: input.trim(), output, createdAt: new Date() });
+      await completeReservation(db, reservation!);
+
+      return NextResponse.json({ success: true, output });
+    } catch (error) {
+      await releaseReservation(db, reservation!);
+      throw error;
+    }
   } catch (error) {
     console.error('Tool execution error:', error);
     return NextResponse.json({ error: 'Failed to run tool' }, { status: 500 });

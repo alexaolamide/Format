@@ -6,8 +6,11 @@ import { authOptions } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import { checkATSScore } from '@/lib/openrouter';
 import { ObjectId } from 'mongodb';
+import crypto from 'crypto';
+import { completeReservation, creditLimitMessage, releaseReservation, reserveCredits, type CreditReservation } from '@/lib/credits';
 
 export async function POST(request: NextRequest) {
+  let reservation: CreditReservation | null = null;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -29,6 +32,12 @@ export async function POST(request: NextRequest) {
     if (!resume) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
     }
+
+    reservation = await reserveCredits(db, (session.user as any).id, 'ats-check', 2, crypto.randomUUID()).catch((error) => {
+      if (error instanceof Error && error.message === 'CREDIT_LIMIT') return null;
+      throw error;
+    });
+    if (!reservation) return NextResponse.json({ error: creditLimitMessage(), code: 'CREDIT_LIMIT' }, { status: 402 });
 
     const resumeContent = [
       `Name: ${resume.personalInfo.fullName}`,
@@ -80,9 +89,14 @@ export async function POST(request: NextRequest) {
       month: new Date().toISOString().slice(0, 7),
       createdAt: new Date(),
     });
+    await completeReservation(db, reservation);
 
     return NextResponse.json({ success: true, atsResult: parsedResult });
   } catch (error) {
+    if (reservation) {
+      const { db } = await connectToDatabase();
+      await releaseReservation(db, reservation);
+    }
     console.error('ATS check error:', error);
     return NextResponse.json({ error: 'Failed to check ATS score' }, { status: 500 });
   }

@@ -9,6 +9,7 @@ export interface ToolDefinition {
   href?: string;
   priceStars?: number;
   available: boolean;
+  creditCost: number;
 }
 
 export const toolCategories: ToolCategory[] = [
@@ -28,6 +29,7 @@ export const tools: ToolDefinition[] = [
     icon: 'CV',
     href: '/dashboard/resume/new',
     available: true,
+    creditCost: 2,
   },
   {
     id: 'cover-letter',
@@ -37,6 +39,7 @@ export const tools: ToolDefinition[] = [
     icon: 'CL',
     href: '/dashboard/cover-letter/new',
     available: true,
+    creditCost: 4,
   },
   {
     id: 'ats-check',
@@ -46,6 +49,7 @@ export const tools: ToolDefinition[] = [
     icon: 'AT',
     href: '/dashboard/resume/list',
     available: true,
+    creditCost: 2,
   },
   {
     id: 'business-plan',
@@ -56,6 +60,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/business-plan',
     priceStars: 25,
     available: true,
+    creditCost: 8,
   },
   {
     id: 'invoice-maker',
@@ -66,6 +71,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/invoice-maker',
     priceStars: 10,
     available: true,
+    creditCost: 3,
   },
   {
     id: 'social-caption',
@@ -76,6 +82,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/social-caption',
     priceStars: 10,
     available: true,
+    creditCost: 3,
   },
   {
     id: 'content-calendar',
@@ -86,6 +93,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/content-calendar',
     priceStars: 15,
     available: true,
+    creditCost: 8,
   },
   {
     id: 'email-writer',
@@ -96,6 +104,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/email-writer',
     priceStars: 10,
     available: true,
+    creditCost: 3,
   },
   {
     id: 'meeting-notes',
@@ -106,6 +115,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/meeting-notes',
     priceStars: 10,
     available: true,
+    creditCost: 4,
   },
   {
     id: 'study-planner',
@@ -116,6 +126,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/study-planner',
     priceStars: 15,
     available: true,
+    creditCost: 5,
   },
   {
     id: 'quiz-maker',
@@ -126,6 +137,7 @@ export const tools: ToolDefinition[] = [
     href: '/dashboard/tools/quiz-maker',
     priceStars: 15,
     available: true,
+    creditCost: 4,
   },
 ];
 
