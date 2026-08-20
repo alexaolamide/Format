@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
       plan: user?.plan || 'free',
       creditsRemaining: user?.creditsRemaining ?? 0,
       telegramId: user?.telegramId || null,
+      telegramUsername: user?.telegramUsername || null,
+      telegramName: user?.telegramName || null,
       purchasedTools: user?.purchasedTools || [],
     });
   } catch (error) {

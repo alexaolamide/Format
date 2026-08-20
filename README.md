@@ -89,6 +89,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 TELEGRAM_BOT_USERNAME=your-telegram-bot-username
+TELEGRAM_STORE_IMAGE_URL=https://your-domain.com/telegram-store.png
 TELEGRAM_WEBHOOK_SECRET=your-webhook-secret
 
 RESEND_API_KEY=re_your-key
@@ -130,6 +131,21 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 7. Telegram calls `/api/telegram/webhook` for pre-checkout validation and successful payments.
 
 For Telegram Stars invoices, do not configure a Stripe provider token. The payment payload is recorded against the user after Telegram confirms payment.
+
+### Register the Telegram webhook
+
+After the new Render service is live, run this once with the actual HTTPS URL:
+
+```bash
+curl -X POST "https://your-doerforge-domain.onrender.com/api/telegram/setup" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: your-admin-session-cookie" \
+  -d '{"url":"https://your-doerforge-domain.onrender.com/api/telegram/webhook"}'
+```
+
+Alternatively, call Telegram's `setWebhook` API directly using `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`. Telegram must show the webhook as active before bot commands, account linking, and payment updates can work.
+
+Users can connect from Settings, send the generated `/start link_<code>` link to the bot, then use `/store` to browse paid tools. They can unlink from Settings and connect a different Telegram account afterward. The bot responds to `/start`, `/help`, and `/store`; payment confirmations include the purchased tool, Stars amount, and Telegram charge ID. The same Telegram account cannot be linked to multiple Doerforge accounts.
 
 ## API Routes
 

@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { getAppUrl } from './app-url';
 
 const FROM_EMAIL = 'Doerforge by Alex Studio <onboarding@resend.dev>';
 
@@ -9,10 +10,6 @@ function getResendClient() {
   }
 
   return new Resend(apiKey);
-}
-
-function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 }
 
 export async function sendVerificationEmail(email: string, token: string) {

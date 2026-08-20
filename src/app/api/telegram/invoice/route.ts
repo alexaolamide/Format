@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       payload: `tool_${tool.id}_${user._id.toString()}`,
       currency: 'XTR',
       prices: [{ label: tool.name, amount: tool.priceStars }],
+      ...(process.env.TELEGRAM_STORE_IMAGE_URL ? { photo_url: process.env.TELEGRAM_STORE_IMAGE_URL } : {}),
     });
 
     if (!result.ok) {

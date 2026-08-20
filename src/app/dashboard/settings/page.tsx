@@ -13,6 +13,8 @@ export default function SettingsPage() {
   const [linkingTelegram, setLinkingTelegram] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
+  const [unlinkingTelegram, setUnlinkingTelegram] = useState(false);
+  const [telegramProfile, setTelegramProfile] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -23,7 +25,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/telegram/verify').then((response) => response.json()).then((data) => {
-        if (data.success) setTelegramId(data.telegramId);
+        if (data.success) {
+          setTelegramId(data.telegramId);
+          setTelegramProfile(data.telegramUsername ? `@${data.telegramUsername}` : (data.telegramName || ''));
+        }
       });
     }
   }, [status]);
@@ -45,6 +50,19 @@ export default function SettingsPage() {
     const data = await response.json();
     if (data.success) setTelegramLink(data.url);
     setLinkingTelegram(false);
+  };
+
+  const unlinkTelegram = async () => {
+    if (!window.confirm('Unlink Telegram from this Doerforge account?')) return;
+    setUnlinkingTelegram(true);
+    const response = await fetch('/api/telegram/unlink', { method: 'POST' });
+    const data = await response.json();
+    if (data.success) {
+      setTelegramId(null);
+      setTelegramProfile('');
+      setTelegramLink('');
+    }
+    setUnlinkingTelegram(false);
   };
 
   const deleteAccount = async () => {
@@ -119,7 +137,7 @@ export default function SettingsPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Telegram Stars</h2>
           <p className="text-sm text-gray-600">Connect Telegram securely to receive invoices and unlock paid Doerforge tools.</p>
           {telegramId ? (
-            <p className="mt-4 text-sm font-semibold text-green-700">Telegram is connected.</p>
+            <div className="mt-4 flex flex-wrap items-center gap-4"><p className="text-sm font-semibold text-green-700">Telegram is connected{telegramProfile ? ` as ${telegramProfile}` : ''}.</p><button onClick={unlinkTelegram} disabled={unlinkingTelegram} className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-50">{unlinkingTelegram ? 'Unlinking...' : 'Unlink Telegram'}</button></div>
           ) : (
             <button onClick={connectTelegram} disabled={linkingTelegram} className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50">
               {linkingTelegram ? 'Preparing link...' : 'Connect Telegram'}

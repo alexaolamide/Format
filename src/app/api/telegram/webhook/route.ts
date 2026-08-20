@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { answerPreCheckoutQuery } from '@/lib/telegram';
+import { answerCallbackQuery, answerPreCheckoutQuery, sendInvoice, sendTelegramMessage } from '@/lib/telegram';
 import { connectToDatabase } from '@/lib/mongodb';
-import crypto from 'crypto';
+import { tools } from '@/lib/tools';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -20,28 +20,104 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const message = body.message;
+    const telegramId = message?.from?.id;
+    const command = typeof message?.text === 'string' ? message.text.trim() : '';
+
+    if (telegramId && (command === '/start' || command === '/help')) {
+      await sendTelegramMessage(
+        telegramId,
+        '<b>Welcome to Doerforge by Alex Studio</b>\n\nConnect your account from Doerforge Settings, then send the generated link here.\n\nCommands:\n/store - browse paid tools\n/help - show this help',
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    if (telegramId && command === '/store') {
+      const paidTools = tools.filter((tool) => tool.priceStars);
+      await sendTelegramMessage(
+        telegramId,
+        '<b>Doerforge Store</b>\n\nChoose a tool to receive a Telegram Stars invoice. Your account must be linked first.',
+        {
+          inline_keyboard: paidTools.map((tool) => [{
+            text: `${tool.name} · ${tool.priceStars} ⭐`,
+            callback_data: `buy_tool:${tool.id}`,
+          }]),
+        },
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.callback_query) {
+      const callback = body.callback_query;
+      const callbackData = String(callback.data || '');
+      if (callbackData.startsWith('buy_tool:')) {
+        const toolId = callbackData.slice('buy_tool:'.length);
+        const tool = tools.find((item) => item.id === toolId && item.priceStars);
+        if (!tool || !callback.from?.id) {
+          await answerCallbackQuery(String(callback.id), 'That tool is unavailable.');
+          return NextResponse.json({ success: true });
+        }
+
+        const { db } = await connectToDatabase();
+        const user = await db.collection('users').findOne({ telegramId: callback.from.id });
+        if (!user) {
+          await answerCallbackQuery(String(callback.id), 'Link your Doerforge account first.');
+          await sendTelegramMessage(callback.from.id, 'Please open Doerforge Settings, generate a Telegram link, and send it here before purchasing.');
+          return NextResponse.json({ success: true });
+        }
+
+        const result = await sendInvoice({
+          user_id: callback.from.id,
+          title: tool.name,
+          description: tool.description,
+          payload: `tool_${tool.id}_${user._id.toString()}`,
+          currency: 'XTR',
+          prices: [{ label: tool.name, amount: tool.priceStars! }],
+          ...(process.env.TELEGRAM_STORE_IMAGE_URL ? { photo_url: process.env.TELEGRAM_STORE_IMAGE_URL } : {}),
+        });
+        await answerCallbackQuery(String(callback.id), result.ok ? 'Invoice sent.' : 'Could not create invoice.');
+      }
+      return NextResponse.json({ success: true });
+    }
+
     if (body.message?.text?.startsWith('/start link_')) {
       const token = body.message.text.slice('/start link_'.length).trim();
-      const telegramId = body.message.from?.id;
       const { db } = await connectToDatabase();
       const user = await db.collection('users').findOne({
         telegramLinkToken: token,
         telegramLinkExpires: { $gt: new Date() },
       });
 
+      if (!user || !telegramId) {
+        await sendTelegramMessage(telegramId, 'This link is invalid or expired. Generate a new Telegram link from Doerforge Settings.');
+        return NextResponse.json({ success: true });
+      }
+
+      const linkedAccount = await db.collection('users').findOne({ telegramId });
+      if (linkedAccount && linkedAccount._id.toString() !== user._id.toString()) {
+        await sendTelegramMessage(telegramId, 'This Telegram account is already linked to another Doerforge account. Unlink it there first.');
+        return NextResponse.json({ success: true });
+      }
+
+      if (user.telegramId && user.telegramId !== telegramId) {
+        await sendTelegramMessage(telegramId, 'This Doerforge account is already linked to another Telegram account. Unlink it in Settings first.');
+        return NextResponse.json({ success: true });
+      }
+
       if (user && telegramId) {
         await db.collection('users').updateOne(
           { _id: user._id },
           {
-            $set: { telegramId, updatedAt: new Date() },
+            $set: {
+              telegramId,
+              telegramUsername: body.message.from.username || null,
+              telegramName: [body.message.from.first_name, body.message.from.last_name].filter(Boolean).join(' ') || null,
+              updatedAt: new Date(),
+            },
             $unset: { telegramLinkToken: '', telegramLinkExpires: '' },
           }
         );
-        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: telegramId, text: 'Telegram is now connected to your Doerforge account.' }),
-        });
+        await sendTelegramMessage(telegramId, '<b>Telegram connected</b> ✅\n\nYour Doerforge account is now linked. Send /store to browse tools and pay with Telegram Stars.');
       }
 
       return NextResponse.json({ success: true });
@@ -54,6 +130,14 @@ export async function POST(request: NextRequest) {
 
       if (!user) {
         await answerPreCheckoutQuery(String(id), false, 'User not found. Please link your account first.');
+        return NextResponse.json({ success: false });
+      }
+
+      const payload = String(body.pre_checkout_query.invoice_payload || '');
+      const payloadParts = payload.split('_');
+      const expectedTool = payloadParts[0] === 'tool' ? tools.find((tool) => tool.id === payloadParts[1]) : null;
+      if (payloadParts[0] === 'tool' && (!expectedTool || payloadParts[2] !== user._id.toString())) {
+        await answerPreCheckoutQuery(String(id), false, 'This invoice is not valid for this account.');
         return NextResponse.json({ success: false });
       }
 
@@ -96,16 +180,13 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
       });
 
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: telegramId,
-          text: isToolPurchase
-            ? `Payment successful! ${payloadParts[1]} is now unlocked in your Doerforge account.`
-            : `Payment successful! You are now on the ${plan!.toUpperCase()} plan. Enjoy unlimited resume optimizations!`,
-        }),
-      });
+      const purchasedTool = isToolPurchase ? tools.find((tool) => tool.id === payloadParts[1]) : null;
+      await sendTelegramMessage(
+        telegramId,
+        isToolPurchase
+          ? `<b>Payment successful</b> ✅\n\n<b>Tool:</b> ${purchasedTool?.name || payloadParts[1]}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>\n\nThe tool is now unlocked in your Doerforge account. You can use it from the website or send /store to buy another tool.`
+          : `<b>Payment successful</b> ✅\n\n<b>Plan:</b> ${plan!.toUpperCase()}\n<b>Amount:</b> ${successfulPayment.total_amount} ⭐\n<b>Charge:</b> <code>${telegram_payment_charge_id}</code>`,
+      );
 
       return NextResponse.json({ success: true });
     }

@@ -17,6 +17,11 @@ export async function POST() {
 
     const token = crypto.randomBytes(24).toString('hex');
     const { db } = await connectToDatabase();
+    await db.collection('users').createIndex({ telegramId: 1 }, { unique: true, sparse: true });
+    const currentUser = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+    if (currentUser?.telegramId) {
+      return NextResponse.json({ error: 'Telegram is already connected. Unlink it before connecting another account.' }, { status: 409 });
+    }
     await db.collection('users').updateOne(
       { _id: new ObjectId(userId) },
       {

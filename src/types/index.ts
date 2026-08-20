@@ -66,6 +66,8 @@ export interface User {
   role?: 'user' | 'admin';
   creditsRemaining: number;
   telegramId?: number;
+  telegramUsername?: string;
+  telegramName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

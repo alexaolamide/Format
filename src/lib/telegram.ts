@@ -12,6 +12,10 @@ interface InvoiceParams {
     label: string;
     amount: number;
   }>;
+  photo_url?: string;
+  photo_size?: number;
+  photo_width?: number;
+  photo_height?: number;
 }
 
 export async function sendInvoice(params: InvoiceParams): Promise<any> {
@@ -26,6 +30,51 @@ export async function sendInvoice(params: InvoiceParams): Promise<any> {
       ...(params.provider_token ? { provider_token: params.provider_token } : {}),
       currency: params.currency,
       prices: params.prices,
+      ...(params.photo_url ? {
+        photo_url: params.photo_url,
+        photo_size: params.photo_size,
+        photo_width: params.photo_width,
+        photo_height: params.photo_height,
+      } : {}),
+    }),
+  });
+
+  return response.json();
+}
+
+export async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: unknown): Promise<any> {
+  const response = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    }),
+  });
+
+  return response.json();
+}
+
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<any> {
+  const response = await fetch(`${TELEGRAM_API_URL}/answerCallbackQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+  });
+
+  return response.json();
+}
+
+export async function setTelegramWebhook(url: string, secretToken?: string): Promise<any> {
+  const response = await fetch(`${TELEGRAM_API_URL}/setWebhook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url,
+      ...(secretToken ? { secret_token: secretToken } : {}),
+      allowed_updates: ['message', 'pre_checkout_query', 'callback_query'],
     }),
   });
 
