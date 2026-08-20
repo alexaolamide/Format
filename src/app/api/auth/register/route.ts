@@ -8,7 +8,8 @@ import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email: rawEmail, password } = await request.json();
+    const email = typeof rawEmail === 'string' ? rawEmail.toLowerCase().trim() : rawEmail;
 
     if (!name || !email || !password) {
       return NextResponse.json(

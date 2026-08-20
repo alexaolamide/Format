@@ -97,6 +97,20 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ADMIN_EMAILS=admin@example.com
 ```
 
+For Google OAuth, add this exact authorized redirect URI in Google Cloud Console:
+
+```text
+https://your-doerforge-domain.onrender.com/api/auth/callback/google
+```
+
+For local development, also add:
+
+```text
+http://localhost:3000/api/auth/callback/google
+```
+
+`NEXTAUTH_URL` must exactly match the deployed HTTPS origin, including `https://`. Google sign-in is hidden automatically until both Google environment variables are configured.
+
 Never commit `.env.local` or expose server-side secrets in client components.
 
 ## Admin Management

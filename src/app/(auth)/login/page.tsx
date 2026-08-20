@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { getProviders, signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -11,6 +12,20 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    getProviders().then((providers) => setGoogleEnabled(Boolean(providers?.google)));
+  }, []);
+
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get('error');
+    if (error === 'OAuthAccountNotLinked') {
+      toast.error('This Google email is now linked. Try signing in with Google again.');
+    } else if (error === 'Configuration') {
+      toast.error('Google sign-in is not configured on the server.');
+    }
+  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +52,10 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
+    if (!googleEnabled) {
+      toast.error('Google sign-in is not configured yet. Use email sign-in.');
+      return;
+    }
     signIn('google', { callbackUrl: '/dashboard' });
   };
 
@@ -51,7 +70,8 @@ export default function LoginPage() {
         <div className="bg-white rounded-lg shadow-md p-8">
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg py-3 px-4 hover:bg-gray-50 transition text-gray-700"
+            disabled={!googleEnabled}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg py-3 px-4 hover:bg-gray-50 transition text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -59,7 +79,7 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            Continue with Google
+            {googleEnabled ? 'Continue with Google' : 'Google sign-in unavailable'}
           </button>
 
           <div className="mt-6 relative">
